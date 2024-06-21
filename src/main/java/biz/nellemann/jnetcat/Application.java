@@ -20,16 +20,15 @@ import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
 import java.io.IOException;
-import java.util.Locale;
 import java.util.concurrent.Callable;
 
 
 @Command(name = "jnetcat", mixinStandardHelpOptions = true,
     versionProvider = VersionProvider.class,
-    description = "For more information visit https://git.data.coop/nellemann/jnetcat")
+    description = "For more information visit https://github.com/mnellemann/jnetcat")
 public class Application implements Callable<Integer> {
 
-    @CommandLine.ArgGroup(exclusive = true, multiplicity = "1")
+    @CommandLine.ArgGroup(multiplicity = "1")
     RunMode runMode;
 
     static class RunMode {
@@ -44,7 +43,7 @@ public class Application implements Callable<Integer> {
     int port = 4445;
 
     @CommandLine.Option(names = { "-b", "--buffer" }, paramLabel = "NUM", description = "Buffer size in kB [default: ${DEFAULT-VALUE}].")
-    int bufferSize = 32;
+    int bufferSize = 128;
 
 
     @Override

@@ -1,6 +1,6 @@
 # jnetcat
 
-Lightweight Java version of the netcat tool.
+Lightweight Java clone of the netcat tool.
 
 ## Requirements
 
@@ -13,8 +13,8 @@ You need Java (JRE) version 8 or later to run jnetcat.
 
 ```shell
 Usage: jnetcat [-hV] [-b=NUM] [-p=NUM] (-c=SRV | -s)
-For more information visit https://git.data.coop/nellemann/jnetcat
-  -b, --buffer=NUM    Buffer size in kB [default: 32].
+For more information visit https://github.com/mnellemann/jnetcat
+  -b, --buffer=NUM    Buffer size in kB [default: 128].
   -c, --connect=SRV   Connect to remote server (client).
   -h, --help          Show this help message and exit.
   -p, --port=NUM      Network port [default: 4445].
@@ -31,7 +31,7 @@ On *host A* run jnetcat as a server (receiver) waiting for a connection from a c
 java -jar jnetcat-x.y.z-all.jar -s > output.file
 ```
 
-On *host B* run jnetcat as a client (sender) connecting to the server and reading data from stdint:
+On *host B* run jnetcat as a client (sender) connecting to the server and reading data from stdin:
 
 ```shell
 java -jar jnetcat-x.y.z-all.jar -c server-ip < input.file
@@ -41,8 +41,6 @@ java -jar jnetcat-x.y.z-all.jar -c server-ip < input.file
 
 <details closed>
   <summary><B>Development and Local Testing</B></summary>
-
-## Development Information
 
 You need Java (JDK) version 8 or later to build jnetcat.
 
@@ -54,3 +52,5 @@ Use the gradle build tool, which will download all required dependencies:
 ```shell
 ./gradlew clean build
 ```
+
+</details>

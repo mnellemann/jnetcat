@@ -9,7 +9,7 @@ public class TcpServer extends Thread {
     private final int port;
     private final int bufferSize;
 
-    public TcpServer(int port, int bufferSize) throws IOException {
+    public TcpServer(int port, int bufferSize) {
         this.port = port;
         this.bufferSize = bufferSize;
     }
