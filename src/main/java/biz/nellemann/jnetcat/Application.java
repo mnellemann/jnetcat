@@ -43,7 +43,7 @@ public class Application implements Callable<Integer> {
     @CommandLine.Option(names = { "-p", "--port" }, paramLabel = "NUM", description = "Network port [default: ${DEFAULT-VALUE}].")
     int port = 4445;
 
-    @CommandLine.Option(names = { "-b", "--buffer" }, paramLabel = "NUM", description = "Buffer size in MB [default: ${DEFAULT-VALUE}].")
+    @CommandLine.Option(names = { "-b", "--buffer" }, paramLabel = "NUM", description = "Buffer size in kB [default: ${DEFAULT-VALUE}].")
     int bufferSize = 32;
 
 
