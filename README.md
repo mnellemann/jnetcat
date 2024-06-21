@@ -12,34 +12,35 @@ You need Java (JRE) version 8 or later to run jnetcat.
 - Run **/opt/jnetcat/bin/jnetcat**, if installed from package, or as **java -jar /path/to/jnetcat.jar**
 
 ```shell
-Usage: jnetcat [-huV] [-l=NUM] [-n=NUM] [-p=NUM] [-t=SEC] (-c=SRV | -s)
-For more information visit https://github.com/mnellemann/jnetcat
+Usage: jnetcat [-hV] [-b=NUM] [-p=NUM] (-c=SRV | -s)
+For more information visit https://git.data.coop/nellemann/jnetcat
+  -b, --buffer=NUM    Buffer size in kB [default: 32].
   -c, --connect=SRV   Connect to remote server (client).
   -h, --help          Show this help message and exit.
-  -l, --pkt-len=NUM   Packet size in bytes (client) [default: 1432].
-  -n, --pkt-num=NUM   Number of packets to send (client) [default: 150000].
   -p, --port=NUM      Network port [default: 4445].
   -s, --server        Run server and wait for client (server).
-  -t, --runtime=SEC   Time to run, supersedes pkt-num (client) [default: 0].
-  -u, --udp           Use UDP network protocol [default: false].
   -V, --version       Print version information and exit.
 ```
 
 
 ## Examples
 
-On *host A* run jnetcat as a server waiting for a connection from a client:
+On *host A* run jnetcat as a server (receiver) waiting for a connection from a client and writing data to stdout:
 
 ```shell
-java -jar jnetcat-x.y.z-all.jar -s
+java -jar jnetcat-x.y.z-all.jar -s > output.file
 ```
 
-On *host B* run jnetcat as a client connecting to the server and sending data:
+On *host B* run jnetcat as a client (sender) connecting to the server and reading data from stdint:
 
 ```shell
-java -jar jnetcat-x.y.z-all.jar -c server-ip
+java -jar jnetcat-x.y.z-all.jar -c server-ip < input.file
 ```
 
+-----
+
+<details closed>
+  <summary><B>Development and Local Testing</B></summary>
 
 ## Development Information
 
