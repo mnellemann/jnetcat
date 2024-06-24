@@ -45,6 +45,9 @@ public class Application implements Callable<Integer> {
     @CommandLine.Option(names = { "-b", "--buffer" }, paramLabel = "NUM", description = "Buffer size in kB [default: ${DEFAULT-VALUE}].")
     int bufferSize = 128;
 
+    //@CommandLine.Option(names = { "-r", "--restart" }, description = "Restart when done (server) [default: ${DEFAULT-VALUE}].")
+    //boolean restart = false;
+
 
     @Override
     public Integer call() {

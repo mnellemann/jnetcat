@@ -17,6 +17,8 @@ public class TcpServer extends Thread {
 
     public void run() {
 
+        Statistics statistics = new Statistics();
+
         try {
             ServerSocket socket = new ServerSocket(port);
             socket.setSoTimeout(0); // Wait indefinitely
@@ -24,21 +26,20 @@ public class TcpServer extends Thread {
             Socket server = socket.accept();
             DataInputStream in = new DataInputStream(server.getInputStream());
 
-            long totalBytesReceived = 0;
 
             byte[] buffer = new byte[bufferSize * 1024];
 
             int bytesIn;
             while ((bytesIn = in.read(buffer)) > 0) {
-                totalBytesReceived += bytesIn;
                 System.out.write(buffer, 0, bytesIn);
+                statistics.tick();
+                statistics.transferBytes(bytesIn);
             }
 
             socket.close();
             server.close();
 
-            System.err.println("bytes received: " + totalBytesReceived);
-
+            statistics.printSummary();
         } catch(IOException e) {
             System.err.println(e.getMessage());
         }
