@@ -1,3 +1,5 @@
+import org.redline_rpm.header.Os
+
 plugins {
     id 'java'
     id 'groovy'
@@ -21,10 +23,10 @@ dependencies {
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(8)
+        languageVersion = JavaLanguageVersion.of(17)
     }
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_1_8
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
 }
 
 
@@ -82,7 +84,7 @@ buildDeb {
 
 buildRpm {
     dependsOn build, startShadowScripts
-    os = org.redline_rpm.header.Os.LINUX
+    os = Os.LINUX
 }
 
 tasks.register("packages") {

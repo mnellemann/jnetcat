@@ -4,7 +4,7 @@ Lightweight Java clone of the netcat tool.
 
 ## Requirements
 
-You need Java (JRE) version 8 or later to run jnetcat.
+You need Java (JRE) version 17 or later to run jnetcat.
 
 ## Usage Instructions
 
