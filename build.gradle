@@ -4,7 +4,7 @@ plugins {
     id 'application'
     id "net.nemerosa.versioning" version "4.0.1"
     id "com.netflix.nebula.ospackage" version "14.0.1"
-    id "com.github.johnrengelman.shadow" version "7.1.2"
+    id "com.gradleup.shadow" version "8.3.6"
 }
 
 repositories {
@@ -14,7 +14,6 @@ repositories {
 dependencies {
     testImplementation 'org.apache.groovy:groovy:4.0.21'
     testImplementation 'org.spockframework:spock-core:2.3-groovy-4.0'
-    testImplementation 'junit:junit:4.13.2'
 
     annotationProcessor 'info.picocli:picocli-codegen:4.7.6'
     implementation 'info.picocli:picocli:4.7.6'
@@ -55,7 +54,6 @@ jar {
     }
 }
 
-apply plugin: 'com.netflix.nebula.ospackage'
 ospackage {
     packageName = 'jnetcat'
     release = '1'

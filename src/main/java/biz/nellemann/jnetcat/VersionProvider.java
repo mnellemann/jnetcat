@@ -18,19 +18,41 @@ package biz.nellemann.jnetcat;
 import picocli.CommandLine;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
 
 class VersionProvider implements CommandLine.IVersionProvider {
 
-    public String[] getVersion() throws IOException {
+    private static final String UNKNOWN_VERSION = "unknown";
 
-        Manifest manifest = new Manifest(getClass().getResourceAsStream("/META-INF/MANIFEST.MF"));
-        Attributes attrs = manifest.getMainAttributes();
 
+    @Override
+    public String[] getVersion() {
         return new String[] {
-                "${COMMAND-FULL-NAME} " + attrs.getValue("Build-Version") + " (on ${os.name} ${os.version} ${os.arch})",
+                "${COMMAND-FULL-NAME} " + readBuildVersion() + " (on ${os.name} ${os.version} ${os.arch})",
                 "JVM: ${java.version} (${java.vendor} ${java.vm.name} ${java.vm.version})" };
+    }
+
+
+    private String readBuildVersion() {
+        try (InputStream manifestStream = VersionProvider.class.getResourceAsStream("/META-INF/MANIFEST.MF")) {
+            if (manifestStream == null) {
+                return UNKNOWN_VERSION;
+            }
+            Manifest manifest = new Manifest(manifestStream);
+            Attributes attrs = manifest.getMainAttributes();
+            if (attrs == null) {
+                return UNKNOWN_VERSION;
+            }
+            String version = attrs.getValue("Build-Version");
+            if (version == null || version.isEmpty()) {
+                return UNKNOWN_VERSION;
+            }
+            return version;
+        } catch (IOException e) {
+            return UNKNOWN_VERSION;
+        }
     }
 
 }

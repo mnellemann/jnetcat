@@ -28,6 +28,10 @@ import java.util.concurrent.Callable;
     description = "For more information visit https://github.com/mnellemann/jnetcat")
 public class Application implements Callable<Integer> {
 
+    static final int MIN_PORT = 1;
+    static final int MAX_PORT = 65535;
+    static final int MAX_BUFFER_SIZE_KB = 65536;
+
     @CommandLine.ArgGroup(multiplicity = "1")
     RunMode runMode;
 
@@ -39,18 +43,25 @@ public class Application implements Callable<Integer> {
         boolean runServer = false;
     }
 
-    @CommandLine.Option(names = { "-p", "--port" }, paramLabel = "NUM", description = "Network port [default: ${DEFAULT-VALUE}].")
+    @CommandLine.Option(names = { "-p", "--port" }, paramLabel = "NUM", description = "Network port [range: 1..65535, default: ${DEFAULT-VALUE}].")
     int port = 4445;
 
-    @CommandLine.Option(names = { "-b", "--buffer" }, paramLabel = "NUM", description = "Buffer size in kB [default: ${DEFAULT-VALUE}].")
+    @CommandLine.Option(names = { "-b", "--buffer" }, paramLabel = "NUM", description = "Buffer size in kB [range: 1..65536, default: ${DEFAULT-VALUE}].")
     int bufferSize = 128;
 
-    //@CommandLine.Option(names = { "-r", "--restart" }, description = "Restart when done (server) [default: ${DEFAULT-VALUE}].")
-    //boolean restart = false;
+    @CommandLine.Option(names = { "-r", "--restart" }, description = "Keep running and wait for the next client (server).")
+    boolean restart = false;
 
 
     @Override
     public Integer call() {
+
+        try {
+            validateOptions();
+        } catch (IllegalArgumentException e) {
+            System.err.println("Error: " + e.getMessage());
+            return 2;
+        }
 
         try {
             if (runMode.runServer) {
@@ -58,11 +69,25 @@ public class Application implements Callable<Integer> {
             } else if (runMode.remoteServer != null) {
                 runClient(runMode.remoteServer);
             }
-        } catch (IOException | InterruptedException e) {
-            System.err.println(e.getMessage());
+        } catch (IOException e) {
+            System.err.println("Error: " + e.getMessage());
+            return 1;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return 1;
         }
 
         return 0;
+    }
+
+
+    private void validateOptions() {
+        if (port < MIN_PORT || port > MAX_PORT) {
+            throw new IllegalArgumentException(String.format("Port must be between %d and %d: %d", MIN_PORT, MAX_PORT, port));
+        }
+        if (bufferSize < 1 || bufferSize > MAX_BUFFER_SIZE_KB) {
+            throw new IllegalArgumentException(String.format("Buffer size must be between 1 and %d kB: %d", MAX_BUFFER_SIZE_KB, bufferSize));
+        }
     }
 
 
@@ -72,16 +97,17 @@ public class Application implements Callable<Integer> {
     }
 
 
-
-    private void runClient(String remoteHost) throws InterruptedException, IOException {
-        new TcpClient(remoteHost, port, bufferSize);
+    private void runClient(String remoteHost) throws IOException {
+        new TcpClient(remoteHost, port, bufferSize * 1024).run();
     }
 
 
     private void runServer() throws IOException, InterruptedException {
-        TcpServer tcpServer = new TcpServer(port, bufferSize);
-        tcpServer.start();
-        tcpServer.join();
+        try (TcpServer tcpServer = new TcpServer(port, bufferSize * 1024, restart)) {
+            Thread serverThread = new Thread(tcpServer, "jnetcat-server");
+            serverThread.start();
+            serverThread.join();
+        }
     }
 
 }

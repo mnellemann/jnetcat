@@ -15,107 +15,157 @@
  */
 package biz.nellemann.jnetcat;
 
+import java.io.PrintStream;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
-public class Statistics {
+public class Statistics implements AutoCloseable {
 
-    private final int MAX_TICKS_AVG = 300;
-    private final int LOG_AVG_MODULO = 30;
+    private static final int MAX_TICKS_AVG = 300;
+    private static final int LOG_AVG_MODULO = 30;
+
     private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.systemDefault());
-    private long bytesTransferred, bytesTransferredTotal = 0;
-    private long bytesPerSec;
-    private int tickIterations = 0;
+    private final PrintStream printStream;
+    private final Clock clock;
 
     private final long[] bytesPerSecAvgTmp = new long[MAX_TICKS_AVG];
-    private final long[] packetsPerSecAvgTmp = new long[MAX_TICKS_AVG];
 
-    private Instant timestamp1 = Instant.now();
+    private ScheduledExecutorService scheduler;
 
+    private long bytesTransferred = 0;
+    private long bytesTransferredTotal = 0;
+    private long bytesPerSec = 0;
+    private int tickIterations = 0;
+    private int samples = 0;
+    private Instant timestamp1;
 
-    public void reset() {
-        timestamp1 = Instant.now();
+    public Statistics() {
+        this(System.err);
+    }
+
+    Statistics(PrintStream printStream) {
+        this(printStream, Clock.systemDefaultZone());
+    }
+
+    Statistics(PrintStream printStream, Clock clock) {
+        this.printStream = printStream;
+        this.clock = clock;
+        this.timestamp1 = clock.instant();
     }
 
 
-    public void tick() {
-
-        Instant timestamp2 = Instant.now();
-        if(Duration.between(timestamp1, timestamp2).toMillis() >= 1000) {
-
-            // Because we do this every second ...
-            bytesPerSec = bytesTransferred;
-            bytesPerSecAvgTmp[tickIterations] = bytesTransferred;
-
-            timestamp1 = timestamp2;
-            printStatus();
-
+    /**
+     * Begin scheduling statistics output once per second.
+     */
+    public void start() {
+        synchronized (this) {
+            timestamp1 = clock.instant();
             bytesTransferred = 0;
-
-            if(++tickIterations >= MAX_TICKS_AVG) {
-                tickIterations = 0;
-            }
-
-            if(tickIterations % LOG_AVG_MODULO == 0) {
-                printAverage();
-            }
         }
 
+        scheduler = Executors.newSingleThreadScheduledExecutor(runnable -> {
+            Thread thread = new Thread(runnable, "jnetcat-statistics");
+            thread.setDaemon(true);
+            return thread;
+        });
+        scheduler.scheduleAtFixedRate(this::tick, 1, 1, TimeUnit.SECONDS);
     }
 
 
-    public void printStatus() {
-        System.err.printf("%-19s -  Status: %14d B/s %12d KB/s %8d MB/s\n", formatter.format(Instant.now()), bytesPerSec, bytesPerSec/1_000, bytesPerSec/1_000_000);
+    @Override
+    public void close() {
+        if (scheduler != null) {
+            scheduler.shutdownNow();
+            scheduler = null;
+        }
+        printSummary();
     }
 
 
-    public void printSummary() {
-        System.err.println();
-        System.err.printf("%-19s - Summary: %14d B   %12d KB   %8d MB   %8.2f GB\n", formatter.format(Instant.now()), bytesTransferredTotal, bytesTransferredTotal /1_000, bytesTransferredTotal /1_000_000, (double) bytesTransferredTotal/1_000_000_000);
+    /**
+     * Compute and print statistics for the interval since the last tick.
+     * Called once per second by the scheduler started in {@link #start()},
+     * or directly by tests.
+     */
+    synchronized void tick() {
+
+        Instant timestamp2 = clock.instant();
+        long millis = Duration.between(timestamp1, timestamp2).toMillis();
+        if (millis < 1) {
+            return;
+        }
+
+        bytesPerSec = bytesTransferred * 1000 / millis;
+        bytesPerSecAvgTmp[tickIterations] = bytesPerSec;
+        if (samples < MAX_TICKS_AVG) {
+            samples++;
+        }
+
+        timestamp1 = timestamp2;
+        printStatus();
+        bytesTransferred = 0;
+
+        tickIterations++;
+        if (tickIterations % LOG_AVG_MODULO == 0) {
+            printAverage();
+        }
+        if (tickIterations >= MAX_TICKS_AVG) {
+            // Reset the rolling window, so stale samples are not
+            // mixed into future averages.
+            tickIterations = 0;
+            samples = 0;
+            Arrays.fill(bytesPerSecAvgTmp, 0L);
+        }
     }
 
 
-    public void printAverage() {
-        long bytesPerSecAvg = getAverage(bytesPerSecAvgTmp, bytesTransferred);
-        System.err.printf("%-19s - Average: %14d B/s %12d KB/s %8d MB/s %8.2f GB/s\n", formatter.format(Instant.now()), bytesPerSecAvg, bytesPerSecAvg /1_000, bytesPerSecAvg /1_000_000, (double) bytesPerSecAvg /1_000_000_000);
-    }
-
-
-   public void transferBytes(long bytes) {
+    public synchronized void transferBytes(long bytes) {
         bytesTransferred += bytes;
         bytesTransferredTotal += bytes;
     }
 
 
-    private long getAverage(long[] array, long fallback) {
-        long avg = getAverage(array);
-        if(avg < 1) {
-            return fallback;
+    public synchronized long getBytesTransferredTotal() {
+        return bytesTransferredTotal;
+    }
+
+    public synchronized long getBytesPerSec() {
+        return bytesPerSec;
+    }
+
+    public synchronized long getAverageBytesPerSec() {
+        if (samples == 0) {
+            return 0;
         }
-        return avg;
+        long sum = 0;
+        for (int i = 0; i < samples; i++) {
+            sum += bytesPerSecAvgTmp[i];
+        }
+        return sum / samples;
     }
 
 
-    private long getAverage(long[] array) {
-        if(array.length <= 1) {
-            return 0;
-        }
-        int len = 0;
-        long sum = 0;
-        for (long l : array) {
-            if(l > 0) {
-                sum += l;
-                len++;
-            }
-        }
+    private void printStatus() {
+        printStream.printf("%-19s -  Status: %14d B/s %12d KB/s %8d MB/s%n", formatter.format(clock.instant()), bytesPerSec, bytesPerSec /1_000, bytesPerSec /1_000_000);
+    }
 
-        long avg = 0;
-        if(len > 0) {
-            avg = sum / len;
-        }
-        return avg;
+
+    public synchronized void printAverage() {
+        long bytesPerSecAvg = getAverageBytesPerSec();
+        printStream.printf("%-19s - Average: %14d B/s %12d KB/s %8d MB/s %8.2f GB/s%n", formatter.format(clock.instant()), bytesPerSecAvg, bytesPerSecAvg /1_000, bytesPerSecAvg /1_000_000, (double) bytesPerSecAvg /1_000_000_000);
+    }
+
+
+    public synchronized void printSummary() {
+        printStream.println();
+        printStream.printf("%-19s - Summary: %14d B   %12d KB   %8d MB   %8.2f GB%n", formatter.format(clock.instant()), bytesTransferredTotal, bytesTransferredTotal /1_000, bytesTransferredTotal /1_000_000, (double) bytesTransferredTotal /1_000_000_000);
     }
 
 }

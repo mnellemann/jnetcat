@@ -12,20 +12,30 @@ You need Java (JRE) version 8 or later to run jnetcat.
 - Run **/opt/jnetcat/bin/jnetcat**, if installed from package, or as **java -jar /path/to/jnetcat.jar**
 
 ```shell
-Usage: jnetcat [-hV] [-b=NUM] [-p=NUM] (-c=SRV | -s)
+Usage: jnetcat [-hrV] [-b=NUM] [-p=NUM] (-c=SRV | -s)
 For more information visit https://github.com/mnellemann/jnetcat
-  -b, --buffer=NUM    Buffer size in kB [default: 128].
+  -b, --buffer=NUM    Buffer size in kB [range: 1..65536, default: 128].
   -c, --connect=SRV   Connect to remote server (client).
   -h, --help          Show this help message and exit.
-  -p, --port=NUM      Network port [default: 4445].
+  -p, --port=NUM      Network port [range: 1..65535, default: 4445].
+  -r, --restart       Keep running and wait for the next client (server).
   -s, --server        Run server and wait for client (server).
   -V, --version       Print version information and exit.
 ```
 
+### Exit Codes
+
+The jnetcat exit code can be used in scripts to detect failures:
+
+- **0** - the transfer completed successfully.
+- **1** - a runtime error occurred (e.g. connection refused, broken pipe).
+- **2** - invalid arguments or usage.
+
+
 
 ### Example
 
-On *host A* run jnetcat as a server (receiver) waiting for a connection from a client and writing data to stdout:
+On *host A* run jnetcat as a server (receiver) waiting for a connection from a client and writing data to stdout. The server exits after the transfer is done, unless `-r`/`--restart` is given, in which case it keeps running and waits for the next client:
 
 ```shell
 java -jar jnetcat-x.y.z-all.jar -s > output.file
@@ -50,7 +60,7 @@ $ dd if=/dev/urandom of=/tmp/test-5g.file bs=1000000 count=5000
 $ md5sum /tmp/test-5g.file
 1a967529d848d97e425099743ab52000  /tmp/test-5g.file
 
-$ /opt/jnetcat/bin/jnetcat -c reciving-host < /tmp/test-5g.file
+$ /opt/jnetcat/bin/jnetcat -c receiving-host < /tmp/test-5g.file
 2024-06-26 10:21:28 -  Status:      119013376 B/s       119013 KB/s      119 MB/s
 2024-06-26 10:21:29 -  Status:      118095872 B/s       118095 KB/s      118 MB/s
 2024-06-26 10:21:30 -  Status:      118226944 B/s       118226 KB/s      118 MB/s
